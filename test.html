@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZAMES - Схема столиков</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f3f4f6;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            font-size: 14px;
+            color: #6b7280;
+            flex-wrap: wrap;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .map-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .map {
+            position: relative;
+            padding-top: 120%;
+            background-color: #f9fafb;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+        }
+
+        .table {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .table:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .table-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            border: 3px solid white;
+            transition: transform 0.2s;
+        }
+
+        .table-number {
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .table-seats {
+            font-size: 11px;
+            color: white;
+            opacity: 0.9;
+        }
+
+        .label {
+            position: absolute;
+            font-size: 12px;
+            font-weight: bold;
+            color: #374151;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 2px solid;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #9ca3af;
+        }
+
+        .status-badge {
+            padding: 16px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            color: #374151;
+        }
+
+        .order-sum {
+            margin-top: 10px;
+            padding: 12px;
+            background-color: #f3f4f6;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ZAMES</h1>
+        <div class="stats">
+            <span>Всего: <span id="total">0</span></span>
+            <span style="color: #10b981">Свободно: <span id="free">0</span></span>
+            <span style="color: #ef4444">Занято: <span id="occupied">0</span></span>
+            <span style="color: #f59e0b">Бронь: <span id="reserved">0</span></span>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #10b981;"></div>
+            <span>Свободен</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #ef4444;"></div>
+            <span>Занят</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #f59e0b;"></div>
+            <span>Забронирован</span>
+        </div>
+    </div>
+
+    <div class="map-container">
+        <div class="map" id="map">
+            <!-- Labels -->
+            <div class="label" style="top: 2%; right: 5%; background-color: white; border-color: #e5e7eb;">ВХОД ↓</div>
+            <div class="label" style="top: 40%; right: 3%; background-color: #fef3c7; border-color: #fbbf24;">ХОСТЕС</div>
+            <div class="label" style="bottom: 18%; right: 3%; background-color: #dbeafe; border-color: #3b82f6;">СТЕЙШН</div>
+            <div class="label" style="bottom: 8%; left: 15%; background-color: #f3e8ff; border-color: #a855f7;">БАР</div>
+            <div class="label" style="bottom: 8%; right: 25%; background-color: #fce7f3; border-color: #ec4899;">РАЗДАЧА</div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Столик #1</h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <div class="status-badge" id="modalStatus"></div>
+            <div id="modalInfo"></div>
+        </div>
+    </div>
+
+    <script>
+        // Конфигурация столиков
+        const tableLayout = [
+            // Ряд 1
+            { id: 1, seats: 4, type: 'square', x: 10, y: 10 },
+            { id: 2, seats: 4, type: 'square', x: 30, y: 10 },
+            { id: 3, seats: 4, type: 'square', x: 50, y: 10 },
+            { id: 4, seats: 4, type: 'square', x: 75, y: 10 },
+            { id: 5, seats: 4, type: 'square', x: 88, y: 10 },
+            // Ряд 2
+            { id: 6, seats: 4, type: 'square', x: 10, y: 28 },
+            { id: 7, seats: 4, type: 'square', x: 30, y: 28 },
+            { id: 8, seats: 4, type: 'square', x: 50, y: 28 },
+            { id: 9, seats: 4, type: 'square', x: 88, y: 28 },
+            // Ряд 3
+            { id: 10, seats: 6, type: 'square', x: 10, y: 46 },
+            { id: 11, seats: 8, type: 'round', x: 30, y: 46 },
+            { id: 12, seats: 8, type: 'round', x: 50, y: 46 },
+            { id: 13, seats: 2, type: 'square', x: 68, y: 46 },
+            { id: 14, seats: 4, type: 'square', x: 88, y: 46 },
+            // Ряд 4
+            { id: 15, seats: 4, type: 'square', x: 10, y: 64 },
+            { id: 16, seats: 4, type: 'round', x: 30, y: 64 },
+            { id: 17, seats: 4, type: 'round', x: 42, y: 64 },
+            { id: 18, seats: 4, type: 'round', x: 54, y: 64 },
+            { id: 19, seats: 4, type: 'square', x: 88, y: 64 },
+            // Ряд 5
+            { id: 20, seats: 4, type: 'square', x: 10, y: 78 },
+            { id: 21, seats: 4, type: 'round', x: 30, y: 78 },
+            { id: 22, seats: 4, type: 'round', x: 42, y: 78 },
+            { id: 23, seats: 4, type: 'round', x: 54, y: 78 },
+            { id: 24, seats: 4, type: 'square', x: 88, y: 78 },
+            { id: 30, seats: 4, type: 'square', x: 88, y: 85 },
+            // Ряд 6
+            { id: 25, seats: 4, type: 'square', x: 10, y: 92 },
+            { id: 26, seats: 4, type: 'round', x: 30, y: 92 },
+            { id: 27, seats: 4, type: 'round', x: 42, y: 92 },
+            { id: 28, seats: 4, type: 'square', x: 60, y: 92 },
+            { id: 29, seats: 4, type: 'square', x: 72, y: 92 },
+            { id: 33, seats: 4, type: 'square', x: 88, y: 92 },
+            // Нижний ряд
+            { id: 31, seats: 4, type: 'square', x: 30, y: 106 },
+            { id: 32, seats: 4, type: 'square', x: 42, y: 106 },
+            { id: 34, seats: 4, type: 'square', x: 88, y: 106 }
+        ];
+
+        let tablesData = {};
+
+        // Функция получения цвета по статусу
+        function getStatusColor(status) {
+            switch (status) {
+                case 'free': return '#10b981';
+                case 'occupied': return '#ef4444';
+                case 'reserved': return '#f59e0b';
+                default: return '#6b7280';
+            }
+        }
+
+        function getStatusText(status) {
+            switch (status) {
+                case 'free': return 'Свободен';
+                case 'occupied': return 'Занят';
+                case 'reserved': return 'Забронирован';
+                default: return 'Неизвестно';
+            }
+        }
+
+        // URL вашего API (замените на ваш домен/IP)
+        const API_URL = 'http://your-server-ip:8080';
+        
+        // Загрузка данных
+        async function loadTableData() {
+            try {
+                // Загружаем данные с вашего API
+                const response = await fetch(`${API_URL}/api/tables`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                tablesData = await response.json();
+                renderTables();
+                updateStats();
+                
+                console.log('Данные загружены успешно:', Object.keys(tablesData).length, 'столиков');
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+                
+                // Fallback на моковые данные если API недоступен
+                tablesData = generateMockData();
+                renderTables();
+                updateStats();
+            }
+        }
+
+        // Генерация моковых данных (замените на реальный API)
+        function generateMockData() {
+            const data = {};
+            const statuses = ['free', 'occupied', 'reserved'];
+            
+            tableLayout.forEach(table => {
+                const status = statuses[Math.floor(Math.random() * statuses.length)];
+                data[table.id] = {
+                    id: table.id,
+                    status: status,
+                    seats: table.seats,
+                    currentGuests: status === 'occupied' ? Math.floor(Math.random() * table.seats) + 1 : 0,
+                    reservationTime: status === 'reserved' ? '19:30' : null,
+                    guestName: status === 'reserved' ? 'Иванов И.' : null,
+                    orderSum: status === 'occupied' ? Math.floor(Math.random() * 5000) + 1000 : 0
+                };
+            });
+            
+            return data;
+        }
+
+        // Рендер столиков
+        function renderTables() {
+            const map = document.getElementById('map');
+            
+            tableLayout.forEach(table => {
+                const tableData = tablesData[table.id] || { status: 'unknown', seats: table.seats };
+                const color = getStatusColor(tableData.status);
+                const isRound = table.type === 'round';
+                
+                const tableDiv = document.createElement('div');
+                tableDiv.className = 'table';
+                tableDiv.style.left = `${table.x}%`;
+                tableDiv.style.top = `${table.y}%`;
+                tableDiv.onclick = () => showModal(tableData);
+                
+                const innerDiv = document.createElement('div');
+                innerDiv.className = 'table-inner';
+                innerDiv.style.width = isRound ? '60px' : '56px';
+                innerDiv.style.height = isRound ? '60px' : '56px';
+                innerDiv.style.backgroundColor = color;
+                innerDiv.style.borderRadius = isRound ? '50%' : '8px';
+                
+                innerDiv.innerHTML = `
+                    <div class="table-number">${table.id}</div>
+                    <div class="table-seats">${tableData.seats}м</div>
+                `;
+                
+                tableDiv.appendChild(innerDiv);
+                map.appendChild(tableDiv);
+            });
+        }
+
+        // Обновление статистики
+        function updateStats() {
+            const stats = {
+                total: tableLayout.length,
+                free: Object.values(tablesData).filter(t => t.status === 'free').length,
+                occupied: Object.values(tablesData).filter(t => t.status === 'occupied').length,
+                reserved: Object.values(tablesData).filter(t => t.status === 'reserved').length
+            };
+            
+            document.getElementById('total').textContent = stats.total;
+            document.getElementById('free').textContent = stats.free;
+            document.getElementById('occupied').textContent = stats.occupied;
+            document.getElementById('reserved').textContent = stats.reserved;
+        }
+
+        // Показать модальное окно
+        function showModal(tableData) {
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalStatus = document.getElementById('modalStatus');
+            const modalInfo = document.getElementById('modalInfo');
+            
+            modalTitle.textContent = `Столик #${tableData.id}`;
+            modalStatus.textContent = getStatusText(tableData.status);
+            modalStatus.style.backgroundColor = getStatusColor(tableData.status);
+            
+            let infoHTML = `
+                <div class="info-row">
+                    👥 Мест: ${tableData.seats}
+                    ${tableData.status === 'occupied' ? ` (занято: ${tableData.currentGuests})` : ''}
+                </div>
+            `;
+            
+            if (tableData.status === 'reserved') {
+                infoHTML += `
+                    <div class="info-row">🕐 Время: ${tableData.reservationTime}</div>
+                    <div class="info-row">📝 Гость: ${tableData.guestName}</div>
+                `;
+            }
+            
+            if (tableData.status === 'occupied' && tableData.orderSum > 0) {
+                infoHTML += `
+                    <div class="order-sum">
+                        <div style="color: #6b7280; font-size: 14px;">Сумма заказа:</div>
+                        <div style="font-size: 20px; font-weight: bold; color: #1f2937;">
+                            ${tableData.orderSum.toLocaleString('ru-RU')} ₽
+                        </div>
+                    </div>
+                `;
+            }
+            
+            modalInfo.innerHTML = infoHTML;
+            modal.classList.add('active');
+        }
+
+        // Закрыть модальное окно
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        // Закрытие по клику вне окна
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') {
+                closeModal();
+            }
+        });
+
+        // Инициализация
+        loadTableData();
+        
+        // Обновление каждые 10 секунд
+        setInterval(loadTableData, 10000);
+        
+        // Telegram WebApp инициализация
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+        }
+    </script>
+</body>
+</html>
